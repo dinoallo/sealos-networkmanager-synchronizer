@@ -7,6 +7,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/onsi/ginkgo/v2 v2.9.5
 	github.com/onsi/gomega v1.27.7
+	github.com/sqids/sqids-go v0.4.1
 	go.mongodb.org/mongo-driver v1.11.3
 	google.golang.org/grpc v1.59.0
 	k8s.io/apimachinery v0.28.3
