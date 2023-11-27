@@ -9,4 +9,13 @@ metadata:
     app.kubernetes.io/created-by: sealos-nm-synchronizer
   name: trafficsyncrequest-sample
 spec:
-  # TODO(user): Add fields here
+  associatedNamespace: "my-ns"
+  associatedPod: "my-pod"
+  ciliumEndpointID: 1872
+  nodeIP: "192.168.0.104"
+  address: "10.0.0.279"
+  tags:
+    - "world"
+    - "80"
+  syncPeriod: "1m"
+  

@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: namespace
     app.kubernetes.io/instance: system
     app.kubernetes.io/component: manager
-    app.kubernetes.io/created-by: sealos-nm-synchronizer
-    app.kubernetes.io/part-of: sealos-nm-synchronizer
+    app.kubernetes.io/created-by: sealos-networkmanager
+    app.kubernetes.io/part-of: sealos-networkmanager
     app.kubernetes.io/managed-by: kustomize
   name: system
 ---
@@ -98,5 +98,36 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        env:
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              key: db_pass
+              name: nm-syncer-db-conn-credential
+              optional: false
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              key: db_name
+              name: nm-syncer-db-conn-credential
+              optional: false          
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: db_user
+              name: nm-syncer-db-conn-credential
+              optional: false
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              key: db_host
+              name: nm-syncer-db-conn-credential
+              optional: false
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              key: db_port
+              name: nm-syncer-db-conn-credential
+              optional: false
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

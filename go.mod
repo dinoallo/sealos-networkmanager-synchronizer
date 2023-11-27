@@ -3,7 +3,7 @@ module github.com/dinoallo/sealos-networkmanager-synchronizer
 go 1.21
 
 require (
-	github.com/dinoallo/sealos-networkmanager-agent v0.0.0-20231115064435-33320a603bac
+	github.com/dinoallo/sealos-networkmanager-agent v0.0.0-20231127061331-8f43e697bfd1
 	github.com/go-logr/logr v1.2.4
 	github.com/onsi/ginkgo/v2 v2.9.5
 	github.com/onsi/gomega v1.27.7
