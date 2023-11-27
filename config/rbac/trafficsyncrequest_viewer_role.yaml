@@ -1,0 +1,27 @@
+# permissions for end users to view trafficsyncrequests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: trafficsyncrequest-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: sealos-nm-synchronizer
+    app.kubernetes.io/part-of: sealos-nm-synchronizer
+    app.kubernetes.io/managed-by: kustomize
+  name: trafficsyncrequest-viewer-role
+rules:
+- apiGroups:
+  - networking.sealos.io
+  resources:
+  - trafficsyncrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.sealos.io
+  resources:
+  - trafficsyncrequests/status
+  verbs:
+  - get

@@ -1,0 +1,75 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: trafficsyncrequests.networking.sealos.io
+spec:
+  group: networking.sealos.io
+  names:
+    kind: TrafficSyncRequest
+    listKind: TrafficSyncRequestList
+    plural: trafficsyncrequests
+    singular: trafficsyncrequest
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: TrafficSyncRequest is the Schema for the trafficsyncrequests
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TrafficSyncRequestSpec defines the desired state of TrafficSyncRequest
+            properties:
+              address:
+                type: string
+              associatedNamespace:
+                description: Foo is an example field of TrafficSyncRequest. Edit trafficsyncrequest_types.go
+                  to remove/update
+                type: string
+              associatedPod:
+                type: string
+              ciliumEndpointID:
+                format: int64
+                type: integer
+              nodeIP:
+                type: string
+              syncPeriod:
+                type: string
+              tags:
+                items:
+                  type: string
+                type: array
+            type: object
+          status:
+            description: TrafficSyncRequestStatus defines the observed state of TrafficSyncRequest
+            properties:
+              lastSyncTime:
+                additionalProperties:
+                  format: date-time
+                  type: string
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,0 +1,12 @@
+apiVersion: networking.sealos.io/v1alpha1
+kind: TrafficSyncRequest
+metadata:
+  labels:
+    app.kubernetes.io/name: trafficsyncrequest
+    app.kubernetes.io/instance: trafficsyncrequest-sample
+    app.kubernetes.io/part-of: sealos-nm-synchronizer
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: sealos-nm-synchronizer
+  name: trafficsyncrequest-sample
+spec:
+  # TODO(user): Add fields here
