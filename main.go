@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -104,6 +105,9 @@ func main() {
 		Cred: &dbCred,
 		Log:  &storeLogger,
 	}
+	storeCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	store.Launch(storeCtx)
 
 	if err = (&controllers.TrafficSyncRequestReconciler{
 		Client: mgr.GetClient(),
