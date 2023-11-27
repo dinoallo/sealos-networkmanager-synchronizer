@@ -2,14 +2,22 @@ package store
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/sqids/sqids-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+)
+
+const (
+	SQID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
 )
 
 type DBCred struct {
@@ -75,7 +83,11 @@ func (s *Store) IncBytesField(ctx context.Context, nn string, addr string, tag s
 		Key:   "namespaced_name",
 		Value: nn,
 	}}
-	key := fmt.Sprintf("address_properties.%s.tag_properties.%s.%s", addr, tag, bytesFieldName)
+	var id string
+	if err := encodeIP(addr, &id); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("address_properties.%s.tag_properties.%s.%s", id, tag, bytesFieldName)
 	update := bson.D{{
 		Key: "$inc",
 		Value: bson.D{{
@@ -107,4 +119,70 @@ func (s *Store) Save(ctx context.Context, key string, pta *PodTrafficAccount) er
 		return err
 	}
 	return nil
+}
+
+func encodeIP(_ipAddr string, id *string) error {
+	if id == nil {
+		return fmt.Errorf("id shouldn't be nil")
+	}
+	var numbers []uint64
+	_ip := net.ParseIP(_ipAddr)
+	if _ip == nil {
+		return fmt.Errorf("this is not a valid ip address")
+	}
+	if IsIPv4(_ip.String()) {
+		if ip, err := IPv4ToInt(_ip); err != nil {
+			return err
+		} else {
+			numbers = []uint64{uint64(ip)}
+		}
+
+	} else if IsIPv6(_ip.String()) {
+		if ip, err := IPv6ToInt(_ip); err != nil {
+			return err
+		} else {
+			numbers = ip[:]
+		}
+	} else {
+		return fmt.Errorf("this is not a valid ip address")
+	}
+	s, _ := sqids.New(sqids.Options{
+		Alphabet: SQID_ALPHABET,
+	})
+	if _id, err := s.Encode(numbers); err != nil {
+		return err
+	} else {
+		*id = _id
+	}
+	return nil
+}
+
+// conversion credits to: https://github.com/praserx/ipconv/blob/master/ipconv.go
+func IPv4ToInt(ipaddr net.IP) (uint32, error) {
+	if ipaddr.To4() == nil {
+		return 0, fmt.Errorf("this is not an ipv4 address")
+	}
+	return binary.BigEndian.Uint32(ipaddr.To4()), nil
+}
+
+func IPv6ToInt(ipaddr net.IP) ([2]uint64, error) {
+	if ipaddr.To16()[0:8] == nil || ipaddr.To16()[8:16] == nil {
+		return [2]uint64{0, 0}, fmt.Errorf("this is not an ipv6 address")
+	}
+
+	// Get two separates values of integer IP
+	ip := [2]uint64{
+		binary.BigEndian.Uint64(ipaddr.To16()[0:8]),  // IP high
+		binary.BigEndian.Uint64(ipaddr.To16()[8:16]), // IP low
+	}
+
+	return ip, nil
+}
+
+func IsIPv4(address string) bool {
+	return strings.Count(address, ":") < 2
+}
+
+func IsIPv6(address string) bool {
+	return strings.Count(address, ":") >= 2
 }
