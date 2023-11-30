@@ -172,10 +172,10 @@ func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv
 		if err := r.Store.UpdateFieldUint64(ctx, req, "$inc", "sent_bytes", sentBytes); err != nil {
 			return err
 		}
-		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "last_sent_bytes", curSentByteMark); err != nil {
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "last_sent_byte_mark", curSentByteMark); err != nil {
 			return err
 		}
-		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "cur_sent_bytes", sentByteMark); err != nil {
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "cur_sent_byte_mark", sentByteMark); err != nil {
 			return err
 		}
 	}
