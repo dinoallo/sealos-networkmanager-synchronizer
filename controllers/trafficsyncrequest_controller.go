@@ -147,23 +147,23 @@ func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv
 	if resp, err := ac.DumpTraffic(ctx, addr, tagToSync, false); err != nil {
 		return err
 	} else {
-		curSentByteMark := resp.SentBytes
+		sentByteMark := resp.SentBytes
 		_nn := types.NamespacedName{
 			Namespace: tsr.Spec.AssociatedNamespace,
 			Name:      tsr.Spec.AssociatedPod,
 		}
 		nn := _nn.String()
 		var pta store.PodTrafficAccount
-		var lastSentByteMark uint64 = 0
+		var curSentByteMark uint64 = 0
 		if found, err := r.Store.FindPTA(ctx, nn, &pta); err != nil {
 			return err
 		} else if found {
-			if err := pta.GetByteMark(addr, tagToSync, 1, false, &lastSentByteMark); err != nil {
+			if err := pta.GetByteMark(addr, tagToSync, 1, false, &curSentByteMark); err != nil {
 				return err
 			}
 		}
 		var sentBytes uint64
-		sentBytes = curSentByteMark - lastSentByteMark
+		sentBytes = sentByteMark - curSentByteMark
 		req := store.TagPropReq{
 			NamespacedName: nn,
 			Addr:           addr,
@@ -172,10 +172,10 @@ func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv
 		if err := r.Store.UpdateFieldUint64(ctx, req, "$inc", "sent_bytes", sentBytes); err != nil {
 			return err
 		}
-		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "last_sent_bytes", lastSentByteMark); err != nil {
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "last_sent_bytes", curSentByteMark); err != nil {
 			return err
 		}
-		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "cur_sent_bytes", curSentByteMark); err != nil {
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "cur_sent_bytes", sentByteMark); err != nil {
 			return err
 		}
 	}
