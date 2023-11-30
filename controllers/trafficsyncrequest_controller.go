@@ -89,30 +89,28 @@ func (r *TrafficSyncRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 	}
-	lastSyncTime := tsr.Status.LastSyncTime
-	syncPeriod := tsr.Spec.SyncPeriod
-	// the time for synchronization has not yet come
-	for _, tag := range tsr.Spec.Tags {
-		if !r.checkIfSyncRequired(ctx, &tsr, tag) {
+
+	newTsr := tsr.DeepCopy()
+	syncPeriod := newTsr.Spec.SyncPeriod
+	if tsr.Status.LastSyncTime == nil {
+		tsr.Status.LastSyncTime = make(map[string]metav1.Time)
+	}
+	for _, tag := range newTsr.Spec.Tags {
+		// the time for synchronization has not yet come
+		if !r.checkIfSyncRequired(ctx, newTsr, tag) {
 			continue
 		}
-		if err := r.syncTraffic(ctx, &tsr, tag); err != nil {
+		if err := r.syncTraffic(ctx, newTsr, tag); err != nil {
 			log.Error(err, "failed to sync traffic")
 			return ctrl.Result{}, err
 		}
-		newTsr := tsr.DeepCopy()
-		if lastSyncTime == nil {
-			lst := make(map[string]metav1.Time)
-			newTsr.Status.LastSyncTime = lst
-		}
 		newTsr.Status.LastSyncTime[tag] = metav1.Now()
-
-		if err := r.Status().Update(ctx, newTsr); err != nil {
-			log.Error(err, "failed to update the status")
-			return ctrl.Result{}, err
-		}
 	}
 
+	if err := r.Status().Update(ctx, newTsr); err != nil {
+		log.Error(err, "failed to update the status")
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{RequeueAfter: syncPeriod.Duration}, nil
 }
 

@@ -65,7 +65,7 @@ func (r *PortFeedRequestReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	var pfr nmv1alpha1.PortFeedRequest
 
 	if err := r.Get(ctx, req.NamespacedName, &pfr); err != nil {
-		log.Info("unable to fetch the tsr for syncing; ignore for now")
+		log.Info("unable to fetch the pfr for syncing; ignore for now")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	// first, check if the tsr is set up for deletion
