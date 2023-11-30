@@ -135,7 +135,7 @@ func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field stri
 	if err := encodeIP(req.Addr, &id); err != nil {
 		return err
 	}
-	pf_id := fmt.Sprintf("%s-%s-%s-%s", req.Namespace, req.Pod, id, fmt.Sprint(req.Port))
+	pf_id := fmt.Sprintf("%s/%s/%s/%s", req.Namespace, req.Pod, id, fmt.Sprint(req.Port))
 	filter := bson.D{{
 		Key:   "pf_id",
 		Value: pf_id,
