@@ -37,8 +37,8 @@ import (
 )
 
 const (
-	AGENT_PORT     = "50051"
-	FINALIZER_NAME = "networking.sealos.io/tsr-protection"
+	AGENT_PORT         = "50051"
+	TSR_FINALIZER_NAME = "networking.sealos.io/tsr-protection"
 )
 
 // TrafficSyncRequestReconciler reconciles a TrafficSyncRequest object
@@ -52,11 +52,7 @@ type TrafficSyncRequestReconciler struct {
 // +kubebuilder:rbac:groups=networking.sealos.io,resources=trafficsyncrequests,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.sealos.io,resources=trafficsyncrequests/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=networking.sealos.io,resources=trafficsyncrequests/finalizers,verbs=update
-// +kubebuilder:rbac:groups=networking,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=networking,resources=ingresses/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=networking,resources=ingresses/finalizers,verbs=update;patch
-// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch
-// +kubebuilder:rbac:groups=,resources=pods,verbs=get;list;watch
+
 func (r *TrafficSyncRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Logger.WithValues("traffic_sync_request", req.NamespacedName)
 	var tsr nmv1alpha1.TrafficSyncRequest
@@ -68,12 +64,14 @@ func (r *TrafficSyncRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// this tsr is set up for deletion
 	if !tsr.DeletionTimestamp.IsZero() {
 		// re-synchronize the last time for this request before deletion
-		if err := r.syncAllTraffic(ctx, &tsr); err != nil {
-			log.Error(err, "unable to synchronize the traffic the last time before deletion")
-			return ctrl.Result{}, err
+		for _, tag := range tsr.Spec.Tags {
+			if err := r.syncTraffic(ctx, &tsr, tag); err != nil {
+				log.Error(err, "unable to synchronize the traffic the last time before deletion")
+				return ctrl.Result{}, err
+			}
 		}
 		// if it's successful, we remove the finalizer
-		controllerutil.RemoveFinalizer(&tsr, FINALIZER_NAME)
+		controllerutil.RemoveFinalizer(&tsr, TSR_FINALIZER_NAME)
 		if err := r.Update(ctx, &tsr); err != nil {
 			log.Error(err, "unable to remove the finalizer")
 			return ctrl.Result{}, err
@@ -84,8 +82,8 @@ func (r *TrafficSyncRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// if the tsr doesn't have a finalizer, we add one to prevent there is always a
 	// force re-synchronization before the tsr is deleted
-	if !controllerutil.ContainsFinalizer(&tsr, FINALIZER_NAME) {
-		controllerutil.AddFinalizer(&tsr, FINALIZER_NAME)
+	if !controllerutil.ContainsFinalizer(&tsr, TSR_FINALIZER_NAME) {
+		controllerutil.AddFinalizer(&tsr, TSR_FINALIZER_NAME)
 		if err := r.Update(ctx, &tsr); err != nil {
 			log.Error(err, "unable to add the finalizer")
 			return ctrl.Result{}, err
@@ -134,37 +132,6 @@ func (r *TrafficSyncRequestReconciler) checkIfSyncRequired(ctx context.Context, 
 	}
 }
 
-func (r *TrafficSyncRequestReconciler) syncAllTraffic(ctx context.Context, tsr *nmv1alpha1.TrafficSyncRequest) error {
-
-	if tsr == nil || r.Store == nil {
-		return nil
-	}
-
-	nodeIP := tsr.Spec.NodeIP
-	addr := tsr.Spec.Address
-	ac, err := nmaclient.NewClient(nodeIP)
-	if err != nil {
-		return err
-	}
-	defer ac.Close()
-	for _, tag := range tsr.Spec.Tags {
-		if resp, err := ac.DumpTraffic(ctx, addr, tag, true); err != nil {
-			return err
-		} else {
-			sentBytes := resp.SentBytes
-			_nn := types.NamespacedName{
-				Namespace: tsr.Spec.AssociatedNamespace,
-				Name:      tsr.Spec.AssociatedPod,
-			}
-			nn := _nn.String()
-			if err := r.Store.IncBytesField(ctx, nn, addr, tag, sentBytes, 1); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv1alpha1.TrafficSyncRequest, tagToSync string) error {
 	if tsr == nil || r.Store == nil {
 		return nil
@@ -177,16 +144,38 @@ func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv
 	}
 	defer ac.Close()
 
-	if resp, err := ac.DumpTraffic(ctx, addr, tagToSync, true); err != nil {
+	if resp, err := ac.DumpTraffic(ctx, addr, tagToSync, false); err != nil {
 		return err
 	} else {
-		sentBytes := resp.SentBytes
+		curSentByteMark := resp.SentBytes
 		_nn := types.NamespacedName{
 			Namespace: tsr.Spec.AssociatedNamespace,
 			Name:      tsr.Spec.AssociatedPod,
 		}
 		nn := _nn.String()
-		if err := r.Store.IncBytesField(ctx, nn, addr, tagToSync, sentBytes, 1); err != nil {
+		var pta store.PodTrafficAccount
+		var lastSentByteMark uint64 = 0
+		if found, err := r.Store.FindPTA(ctx, nn, &pta); err != nil {
+			return err
+		} else if found {
+			if err := pta.GetByteMark(addr, tagToSync, 1, false, &lastSentByteMark); err != nil {
+				return err
+			}
+		}
+		var sentBytes uint64
+		sentBytes = curSentByteMark - lastSentByteMark
+		req := store.TagPropReq{
+			NamespacedName: nn,
+			Addr:           addr,
+			Tag:            tagToSync,
+		}
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$inc", "sent_bytes", sentBytes); err != nil {
+			return err
+		}
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "last_sent_bytes", lastSentByteMark); err != nil {
+			return err
+		}
+		if err := r.Store.UpdateFieldUint64(ctx, req, "$set", "cur_sent_bytes", curSentByteMark); err != nil {
 			return err
 		}
 	}

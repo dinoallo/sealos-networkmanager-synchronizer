@@ -1,0 +1,12 @@
+apiVersion: networking.sealos.io/v1alpha1
+kind: PortFeedRequest
+metadata:
+  labels:
+    app.kubernetes.io/name: portfeedrequest
+    app.kubernetes.io/instance: portfeedrequest-sample
+    app.kubernetes.io/part-of: sealos-nm-synchronizer
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: sealos-nm-synchronizer
+  name: portfeedrequest-sample
+spec:
+  # TODO(user): Add fields here

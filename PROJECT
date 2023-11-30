@@ -17,4 +17,13 @@ resources:
   kind: TrafficSyncRequest
   path: github.com/dinoallo/sealos-networkmanager-synchronizer/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: sealos.io
+  group: networking
+  kind: PortFeedRequest
+  path: github.com/dinoallo/sealos-networkmanager-synchronizer/api/v1alpha1
+  version: v1alpha1
 version: "3"

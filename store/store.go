@@ -58,20 +58,37 @@ func (s *Store) Close(ctx context.Context) {
 	s.dbClient.Disconnect(context.TODO())
 }
 
-func (s *Store) IncBytesField(ctx context.Context, nn string, addr string, tag string, bytes uint64, t int) error {
+func (s *Store) FindPTA(ctx context.Context, nn string, pta *PodTrafficAccount) (bool, error) {
+	if pta == nil {
+		return false, fmt.Errorf("the pta cannot be nil")
+	}
+	if s.db == nil {
+		return false, fmt.Errorf("please call Launch first")
+	}
+	coll := s.db.Collection("pod_traffic_accounts")
+	filter := bson.D{
+		{
+			Key:   "namespaced_name",
+			Value: nn,
+		},
+	}
+	getCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+	if err := coll.FindOne(getCtx, filter).Decode(pta); err != nil {
+		if err != mongo.ErrNoDocuments {
+			return false, err
+		} else {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (s *Store) UpdateFieldUint64(ctx context.Context, req TagPropReq, op string, field string, value uint64) error {
 	log := s.Log
 	if log == nil {
 		return nil
 	}
-	var bytesFieldName string
-	if t == 0 {
-		bytesFieldName = "recv_bytes"
-	} else if t == 1 {
-		bytesFieldName = "sent_bytes"
-	} else {
-		return nil
-	}
-
 	if s.db == nil {
 		return fmt.Errorf("please call Launch first")
 	}
@@ -81,24 +98,59 @@ func (s *Store) IncBytesField(ctx context.Context, nn string, addr string, tag s
 	opts := options.Update().SetUpsert(true)
 	filter := bson.D{{
 		Key:   "namespaced_name",
-		Value: nn,
+		Value: req.NamespacedName,
 	}}
 	var id string
-	if err := encodeIP(addr, &id); err != nil {
+	if err := encodeIP(req.Addr, &id); err != nil {
 		return err
 	}
-	key := fmt.Sprintf("address_properties.%s.tag_properties.%s.%s", id, tag, bytesFieldName)
+	key := fmt.Sprintf("address_properties.%s.tag_properties.%s.%s", id, req.Tag, field)
 	update := bson.D{{
-		Key: "$inc",
+		Key: op,
 		Value: bson.D{{
 			Key:   key,
-			Value: bytes,
+			Value: value,
 		}},
 	}}
 	if _, err := coll.UpdateOne(updateCtx, filter, update, opts); err != nil {
 		return err
 	} else {
 		log.Info("the data has been updated", "field", key)
+	}
+	return nil
+}
+func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field string, value uint64) error {
+	log := s.Log
+	if log == nil {
+		return nil
+	}
+	if s.db == nil {
+		return fmt.Errorf("please call Launch first")
+	}
+	coll := s.db.Collection("pod_traffic_accounts")
+	updateCtx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	opts := options.Update().SetUpsert(true)
+	var id string
+	if err := encodeIP(req.Addr, &id); err != nil {
+		return err
+	}
+	pf_id := fmt.Sprintf("%s-%s-%s-%s", req.Namespace, req.Pod, id, fmt.Sprint(req.Port))
+	filter := bson.D{{
+		Key:   "pf_id",
+		Value: pf_id,
+	}}
+	update := bson.D{{
+		Key: "$inc",
+		Value: bson.D{{
+			Key:   field,
+			Value: value,
+		}},
+	}}
+	if _, err := coll.UpdateOne(updateCtx, filter, update, opts); err != nil {
+		return err
+	} else {
+		log.Info("the data of the port feed has been updated", "field", field)
 	}
 	return nil
 }

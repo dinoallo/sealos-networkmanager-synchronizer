@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - networking.sealos.io
   resources:
+  - portfeedrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.sealos.io
+  resources:
+  - portfeedrequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.sealos.io
+  resources:
+  - portfeedrequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.sealos.io
+  resources:
   - trafficsyncrequests
   verbs:
   - create

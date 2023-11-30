@@ -112,10 +112,19 @@ func main() {
 	if err = (&controllers.TrafficSyncRequestReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Logger: mgr.GetLogger().WithName("sealos-nm-syncer"),
+		Logger: mgr.GetLogger().WithName("tsr-controller"),
 		Store:  store,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TrafficSyncRequest")
+		os.Exit(1)
+	}
+	if err = (&controllers.PortFeedRequestReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Logger: mgr.GetLogger().WithName("pfr-controller"),
+		Store:  store,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PortFeedRequest")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
