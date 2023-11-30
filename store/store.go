@@ -127,7 +127,7 @@ func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field stri
 	if s.db == nil {
 		return fmt.Errorf("please call Launch first")
 	}
-	coll := s.db.Collection("pod_traffic_accounts")
+	coll := s.db.Collection("pod_feeds")
 	updateCtx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	opts := options.Update().SetUpsert(true)
