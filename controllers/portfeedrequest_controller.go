@@ -154,6 +154,10 @@ func (r *PortFeedRequestReconciler) syncTraffic(ctx context.Context, pfr *nmv1al
 			return err
 		}
 	}
+	if curSentByteMark < lastSentByteMark {
+		// stale byte mark found; not sync this time
+		return nil
+	}
 
 	sentBytes := curSentByteMark - lastSentByteMark
 	req := store.PortFeedProp{

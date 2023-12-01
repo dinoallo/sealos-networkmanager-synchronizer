@@ -160,8 +160,12 @@ func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv
 				return err
 			}
 		}
-		var sentBytes uint64
-		sentBytes = sentByteMark - curSentByteMark
+		if sentByteMark < curSentByteMark {
+			// the marks are stale; reset the mark
+			curSentByteMark = 0
+		}
+
+		sentBytes := sentByteMark - curSentByteMark
 		req := store.TagPropReq{
 			NamespacedName: nn,
 			Addr:           addr,
