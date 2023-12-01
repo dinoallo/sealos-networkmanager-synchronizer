@@ -119,6 +119,8 @@ func (s *Store) UpdateFieldUint64(ctx context.Context, req TagPropReq, op string
 	}
 	return nil
 }
+
+// TODO: set property in another function
 func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field string, value uint64) error {
 	log := s.Log
 	if log == nil {
@@ -131,11 +133,7 @@ func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field stri
 	updateCtx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	opts := options.Update().SetUpsert(true)
-	var id string
-	if err := encodeIP(req.Addr, &id); err != nil {
-		return err
-	}
-	pf_id := fmt.Sprintf("%s/%s/%s/%s", req.Namespace, req.Pod, id, fmt.Sprint(req.Port))
+	pf_id := fmt.Sprintf("%s/%s/%s", req.Namespace, req.Pod, fmt.Sprint(req.Port))
 	filter := bson.D{{
 		Key:   "pf_id",
 		Value: pf_id,
