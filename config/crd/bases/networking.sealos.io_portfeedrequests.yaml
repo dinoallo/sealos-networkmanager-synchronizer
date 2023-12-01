@@ -35,8 +35,6 @@ spec:
           spec:
             description: PortFeedRequestSpec defines the desired state of PortFeedRequest
             properties:
-              address:
-                type: string
               associatedNamespace:
                 description: Foo is an example field of PortFeedRequest. Edit portfeedrequest_types.go
                   to remove/update

@@ -31,7 +31,6 @@ type PortFeedRequestSpec struct {
 	// Foo is an example field of PortFeedRequest. Edit portfeedrequest_types.go to remove/update
 	AssociatedNamespace string          `json:"associatedNamespace,omitempty"`
 	AssociatedPod       string          `json:"associatedPod,omitempty"`
-	Address             string          `json:"address,omitempty"`
 	Port                int32           `json:"port,omitempty"`
 	SyncPeriod          metav1.Duration `json:"syncPeriod,omitempty"`
 }

@@ -138,32 +138,35 @@ func (r *PortFeedRequestReconciler) syncTraffic(ctx context.Context, pfr *nmv1al
 		Name:      pfr.Spec.AssociatedPod,
 	}
 	nn := _nn.String()
-	addr := pfr.Spec.Address
 	tag := fmt.Sprint(pfr.Spec.Port)
 
+	var sentBytes uint64 = 0
 	var pta store.PodTrafficAccount
 	var lastSentByteMark uint64 = 0
 	var curSentByteMark uint64 = 0
 	if found, err := r.Store.FindPTA(ctx, nn, &pta); err != nil {
 		return err
 	} else if found {
-		if err := pta.GetByteMark(addr, tag, 1, true, &lastSentByteMark); err != nil {
-			return err
+		if pta.AddressProperties != nil {
+			for addr := range pta.AddressProperties {
+				if err := pta.GetByteMark(addr, tag, 1, true, &lastSentByteMark); err != nil {
+					return err
+				}
+				if err := pta.GetByteMark(addr, tag, 1, false, &curSentByteMark); err != nil {
+					return err
+				}
+				if curSentByteMark < lastSentByteMark {
+					// stale byte mark found; not sync this time
+					continue
+				}
+			}
+			sentBytes += curSentByteMark - lastSentByteMark
 		}
-		if err := pta.GetByteMark(addr, tag, 1, false, &curSentByteMark); err != nil {
-			return err
-		}
-	}
-	if curSentByteMark < lastSentByteMark {
-		// stale byte mark found; not sync this time
-		return nil
 	}
 
-	sentBytes := curSentByteMark - lastSentByteMark
 	req := store.PortFeedProp{
 		Namespace: pfr.Spec.AssociatedNamespace,
 		Pod:       pfr.Spec.AssociatedPod,
-		Addr:      pfr.Spec.Address,
 		Port:      pfr.Spec.Port,
 	}
 	if err := r.Store.IncPFByteField(ctx, req, "sent_bytes", sentBytes); err != nil {
