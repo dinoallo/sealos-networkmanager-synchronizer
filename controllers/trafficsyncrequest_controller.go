@@ -92,8 +92,8 @@ func (r *TrafficSyncRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	newTsr := tsr.DeepCopy()
 	syncPeriod := newTsr.Spec.SyncPeriod
-	if tsr.Status.LastSyncTime == nil {
-		tsr.Status.LastSyncTime = make(map[string]metav1.Time)
+	if newTsr.Status.LastSyncTime == nil {
+		newTsr.Status.LastSyncTime = make(map[string]metav1.Time)
 	}
 	for _, tag := range newTsr.Spec.Tags {
 		// the time for synchronization has not yet come
