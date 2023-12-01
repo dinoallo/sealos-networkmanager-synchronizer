@@ -140,13 +140,21 @@ func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field stri
 		Key:   "pf_id",
 		Value: pf_id,
 	}}
-	update := bson.D{{
-		Key: "$inc",
-		Value: bson.D{{
-			Key:   field,
-			Value: value,
-		}},
-	}}
+	update := bson.D{
+		{
+			Key: "$inc",
+			Value: bson.D{{
+				Key:   field,
+				Value: value,
+			}},
+		},
+		{
+			Key: "$set",
+			Value: bson.D{{
+				Key:   "pf_prop",
+				Value: req,
+			}},
+		}}
 	if _, err := coll.UpdateOne(updateCtx, filter, update, opts); err != nil {
 		return err
 	} else {
