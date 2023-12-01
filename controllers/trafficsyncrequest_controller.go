@@ -156,7 +156,7 @@ func (r *TrafficSyncRequestReconciler) syncTraffic(ctx context.Context, tsr *nmv
 		if found, err := r.Store.FindPTA(ctx, nn, &pta); err != nil {
 			return err
 		} else if found {
-			if err := pta.GetByteMark(addr, tagToSync, 1, false, &curSentByteMark); err != nil {
+			if err := pta.GetByteMark(addr, tagToSync, 1, false, false, &curSentByteMark); err != nil {
 				return err
 			}
 		}

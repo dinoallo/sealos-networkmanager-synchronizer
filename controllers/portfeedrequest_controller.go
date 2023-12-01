@@ -149,10 +149,10 @@ func (r *PortFeedRequestReconciler) syncTraffic(ctx context.Context, pfr *nmv1al
 	} else if found {
 		if pta.AddressProperties != nil {
 			for addr := range pta.AddressProperties {
-				if err := pta.GetByteMark(addr, tag, 1, true, &lastSentByteMark); err != nil {
+				if err := pta.GetByteMark(addr, tag, 1, true, true, &lastSentByteMark); err != nil {
 					return err
 				}
-				if err := pta.GetByteMark(addr, tag, 1, false, &curSentByteMark); err != nil {
+				if err := pta.GetByteMark(addr, tag, 1, false, true, &curSentByteMark); err != nil {
 					return err
 				}
 				if curSentByteMark < lastSentByteMark {

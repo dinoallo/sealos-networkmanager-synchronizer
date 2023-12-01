@@ -30,7 +30,6 @@ type TagPropReq struct {
 type PortFeedProp struct {
 	Namespace string `bson:"namespace"`
 	Pod       string `bson:"pod"`
-	Addr      string `bson:"addr"`
 	Port      int32  `bson:"port"`
 }
 
@@ -41,14 +40,16 @@ type PortFeed struct {
 	RecvBytes uint64       `bson:"recv_bytes"`
 }
 
-func (pta *PodTrafficAccount) GetByteMark(addr string, tag string, t int, getLast bool, byteMark *uint64) error {
+func (pta *PodTrafficAccount) GetByteMark(addr string, tag string, t int, getLast bool, isAddrEncoded bool, byteMark *uint64) error {
 	if byteMark == nil {
 		return nil
 	}
 	*byteMark = 0
-	var id string
-	if err := encodeIP(addr, &id); err != nil {
-		return err
+	var id string = addr
+	if !isAddrEncoded {
+		if err := encodeIP(addr, &id); err != nil {
+			return err
+		}
 	}
 	if pta.AddressProperties != nil {
 		if _, ok := pta.AddressProperties[id]; ok {
