@@ -183,6 +183,7 @@ func (r *PortFeedRequestReconciler) syncTraffic(ctx context.Context, pfr *nmv1al
 					Pod:       pfr.Spec.AssociatedPod,
 				}
 				pfTP.SentBytes = sentBytes
+				pfTP.CurSentByteMark = sentByteMark
 				if err := r.Store.UpdatePortFeedByAddr(ctx, req, addr, tag, pfTP); err != nil {
 					return err
 				}
