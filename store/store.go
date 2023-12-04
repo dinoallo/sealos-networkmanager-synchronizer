@@ -84,6 +84,32 @@ func (s *Store) FindPTA(ctx context.Context, nn string, pta *PodTrafficAccount) 
 	return true, nil
 }
 
+func (s *Store) FindPF(ctx context.Context, pf_id string, pf *PortFeed) (bool, error) {
+	if pf == nil {
+		return false, fmt.Errorf("the pf cannot be nil")
+	}
+	if s.db == nil {
+		return false, fmt.Errorf("please call Launch first")
+	}
+	coll := s.db.Collection("port_feeds")
+	filter := bson.D{
+		{
+			Key:   "pf_id",
+			Value: pf_id,
+		},
+	}
+	getCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+	if err := coll.FindOne(getCtx, filter).Decode(pf); err != nil {
+		if err != mongo.ErrNoDocuments {
+			return false, err
+		} else {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (s *Store) UpdateFieldUint64(ctx context.Context, req TagPropReq, op string, field string, value uint64) error {
 	log := s.Log
 	if log == nil {
@@ -121,7 +147,7 @@ func (s *Store) UpdateFieldUint64(ctx context.Context, req TagPropReq, op string
 }
 
 // TODO: set property in another function
-func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field string, value uint64) error {
+func (s *Store) UpdatePortFeedByAddr(ctx context.Context, req PortFeedProp, addr string, tag string, tp TagProperty) error {
 	log := s.Log
 	if log == nil {
 		return nil
@@ -133,17 +159,18 @@ func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field stri
 	updateCtx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	opts := options.Update().SetUpsert(true)
-	pf_id := fmt.Sprintf("%s/%s/%s", req.Namespace, req.Pod, fmt.Sprint(req.Port))
+	pf_id := fmt.Sprintf("%s/%s", req.Namespace, req.Pod)
 	filter := bson.D{{
 		Key:   "pf_id",
 		Value: pf_id,
 	}}
+	key := fmt.Sprintf("address_properties.%s.tag_properties.%s", addr, tag)
 	update := bson.D{
 		{
-			Key: "$inc",
+			Key: "$set",
 			Value: bson.D{{
-				Key:   field,
-				Value: value,
+				Key:   key,
+				Value: tp,
 			}},
 		},
 		{
@@ -156,7 +183,7 @@ func (s *Store) IncPFByteField(ctx context.Context, req PortFeedProp, field stri
 	if _, err := coll.UpdateOne(updateCtx, filter, update, opts); err != nil {
 		return err
 	} else {
-		log.Info("the data of the port feed has been updated", "field", field)
+		log.Info("the data of the port feed has been updated", "addr", addr, "tag", tag)
 	}
 	return nil
 }

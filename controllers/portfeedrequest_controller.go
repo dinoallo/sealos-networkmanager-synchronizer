@@ -133,6 +133,15 @@ func (r *PortFeedRequestReconciler) syncTraffic(ctx context.Context, pfr *nmv1al
 	if pfr == nil || r.Store == nil {
 		return nil
 	}
+	pf_id := fmt.Sprintf("%s/%s", pfr.Spec.AssociatedNamespace, pfr.Spec.AssociatedPod)
+	var pfFound bool = false
+	var pf store.PortFeed
+	if found, err := r.Store.FindPF(ctx, pf_id, &pf); err != nil {
+		return err
+	} else {
+		pfFound = found
+	}
+
 	_nn := types.NamespacedName{
 		Namespace: pfr.Spec.AssociatedNamespace,
 		Name:      pfr.Spec.AssociatedPod,
@@ -140,38 +149,47 @@ func (r *PortFeedRequestReconciler) syncTraffic(ctx context.Context, pfr *nmv1al
 	nn := _nn.String()
 	tag := fmt.Sprint(pfr.Spec.Port)
 
-	var sentBytes uint64 = 0
 	var pta store.PodTrafficAccount
-	var lastSentByteMark uint64 = 0
-	var curSentByteMark uint64 = 0
 	if found, err := r.Store.FindPTA(ctx, nn, &pta); err != nil {
 		return err
 	} else if found {
 		if pta.AddressProperties != nil {
 			for addr := range pta.AddressProperties {
-				if err := pta.GetByteMark(addr, tag, 1, true, true, &lastSentByteMark); err != nil {
+				pfTP := store.TagProperty{
+					SentBytes:       0,
+					RecvBytes:       0,
+					CurSentByteMark: 0,
+					CurRecvByteMark: 0,
+				}
+				var ptaTP store.TagProperty
+				if pfFound {
+					if err := pf.GetTagProperty(addr, tag, true, &pfTP); err != nil {
+						return err
+					}
+				}
+				if err := pta.GetTagProperty(addr, tag, true, &ptaTP); err != nil {
 					return err
 				}
-				if err := pta.GetByteMark(addr, tag, 1, false, true, &curSentByteMark); err != nil {
-					return err
-				}
-				if curSentByteMark < lastSentByteMark {
+				sentByteMark := ptaTP.SentBytes
+				curSentByteMark := pfTP.CurSentByteMark
+				sentBytes := pfTP.SentBytes
+				if sentByteMark < curSentByteMark {
 					// stale byte mark found; not sync this time
 					continue
 				}
+				sentBytes += sentByteMark - curSentByteMark
+				req := store.PortFeedProp{
+					Namespace: pfr.Spec.AssociatedNamespace,
+					Pod:       pfr.Spec.AssociatedPod,
+				}
+				pfTP.SentBytes = sentBytes
+				if err := r.Store.UpdatePortFeedByAddr(ctx, req, addr, tag, pfTP); err != nil {
+					return err
+				}
 			}
-			sentBytes += curSentByteMark - lastSentByteMark
 		}
 	}
 
-	req := store.PortFeedProp{
-		Namespace: pfr.Spec.AssociatedNamespace,
-		Pod:       pfr.Spec.AssociatedPod,
-		Port:      pfr.Spec.Port,
-	}
-	if err := r.Store.IncPFByteField(ctx, req, "sent_bytes", sentBytes); err != nil {
-		return err
-	}
 	return nil
 }
 
