@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	counterpb "github.com/dinoallo/sealos-networkmanager-agent/proto"
+	counterpb "github.com/dinoallo/sealos-networkmanager-synchronizer/client/proto/agent"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 

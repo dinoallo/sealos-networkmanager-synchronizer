@@ -1,0 +1,3 @@
+[submodule "client/proto"]
+	path = client/proto
+	url = git@github.com:dinoallo/sealos-networkmanager-protoapi.git
